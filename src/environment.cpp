@@ -34,7 +34,7 @@ std::vector<Car> initHighway(bool renderScene, pcl::visualization::PCLVisualizer
     return cars;
 }
 
-void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
+void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer, float tol, int min_points, int max_points)
 {
     // ----------------------------------------------------
     // -----Open 3D viewer and display simple highway -----
@@ -57,6 +57,22 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
     std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> segmentCloud = ppc.SegmentPlane(scan, 100, 0.2);
     renderPointCloud(viewer,segmentCloud.first,"obstCloud",Color(1,0,0));
     renderPointCloud(viewer,segmentCloud.second,"planeCloud",Color(0,1,0));
+
+
+    std::cout << "Hyper params: " << std::to_string(tol) << ", " << std::to_string(min_points) << ", " << std::to_string(max_points) << std::endl; 
+    std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(0,0,1)};
+
+    // 3 2 50    - Best params for pcl clustering
+    auto cloudClusters = ppc.Clustering(segmentCloud.first, tol, min_points, max_points); 
+
+    int name_id{0}; 
+    for (auto cluster : cloudClusters){
+        Box box = ppc.BoundingBox(cluster);
+        std::string name_cloud = std::to_string(name_id) + "_cluster";
+        renderBox(viewer, box, name_id);
+        renderPointCloud(viewer, cluster, name_cloud, colors[name_id%colors.size()]);
+        name_id++;
+    }
 }
 
 
@@ -88,10 +104,23 @@ int main (int argc, char** argv)
 {
     std::cout << "starting enviroment" << std::endl;
 
+    // Arguments to test clustering
+    double tol;
+    int min_p, max_p;
+    if (argc == 1) {
+      tol = 0.65;
+      min_p = 6;
+      max_p = 30;
+    } else {
+      tol = atof(argv[1]);
+      min_p = atoi(argv[2]);
+      max_p = atoi(argv[3]);
+    }
+
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
-    simpleHighway(viewer);
+    simpleHighway(viewer, tol, min_p, max_p);
 
     while (!viewer->wasStopped ())
     {
