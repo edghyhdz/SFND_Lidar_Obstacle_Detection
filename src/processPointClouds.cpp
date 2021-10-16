@@ -257,10 +257,8 @@ template <typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Pr
     if (std::find(processed_points.begin(), processed_points.end(), i) ==
         processed_points.end()) {
       std::vector<int> clst;
-      typename pcl::PointCloud<PointT>::Ptr temp_cluster(
-          new pcl::PointCloud<PointT>());
-      euclideanHelper(temp, &clst, &processed_points, i, tree,
-                       clusterTolerance);
+      typename pcl::PointCloud<PointT>::Ptr temp_cluster(new pcl::PointCloud<PointT>());
+      euclideanHelper(temp, &clst, &processed_points, i, tree, clusterTolerance);
       clrs.push_back(clst);
 
       for (int _id : clst) {
