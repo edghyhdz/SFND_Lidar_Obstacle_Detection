@@ -64,8 +64,8 @@ struct KdTree
 	/** \brief Helper function to search for nearby nodes in \b *KdTree::root
 	  * \param[in] node a node \b *KdTree::root to search for points
 	  * \param[in] target x or y value
-	  * \param[in] distanceTol x or y split index
-	  * \param[in] depth node id
+	  * \param[in] distanceTol distance threshold
+	  * \param[in] depth depth
 	  * \param[in, out] ids node id
 	  */
 	void helper_search(Node const *node, std::vector<float> target, float distanceTol, int depth, std::vector<int> *ids){
