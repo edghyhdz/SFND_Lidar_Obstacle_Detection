@@ -62,8 +62,10 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer, float tol, in
     std::cout << "Hyper params: " << std::to_string(tol) << ", " << std::to_string(min_points) << ", " << std::to_string(max_points) << std::endl; 
     std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(0,0,1)};
 
-    // 3 2 50    - Best params for pcl clustering
-    auto cloudClusters = ppc.Clustering(segmentCloud.first, tol, min_points, max_points); 
+    // // 3 2 50    - Best params for pcl clustering
+    // auto cloudClusters = ppc.Clustering(segmentCloud.first, tol, min_points, max_points);
+
+    auto cloudClusters = ppc.OwnClustering(segmentCloud.first, tol, min_points, max_points);
 
     int name_id{0}; 
     for (auto cluster : cloudClusters){
