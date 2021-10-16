@@ -43,7 +43,6 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<std::vector<float>> p
 
 }
 
-
 void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Box window, int& iteration, uint depth=0)
 {
 
@@ -75,16 +74,41 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 
 }
 
+/**
+ * Helper function to \b euclideanCluster
+ * 
+ **/
+void proximity(std::vector<float> point, std::vector<int> *cluster, std::vector<int> *p_points, int id, KdTree* tree, float tol) {
+    (*p_points).push_back(id); 
+	(*cluster).push_back(id); 
+	auto search = tree->search(point, tol); 
+
+	for (auto p : search){
+		// Check if point has been already processed, if not call proximity recursively
+		if (std::find(p_points->begin(), p_points->end(), p) == p_points->end()){
+			proximity(point, cluster, p_points, p, tree, tol); 
+		}
+	}	
+}
+
 std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
 {
 
 	// TODO: Fill out this function to return list of indices for each cluster
-
 	std::vector<std::vector<int>> clusters;
- 
-	return clusters;
+	std::vector<int> processed_points; 
 
+	for (int i = 0; i < points.size() - 1; i++){
+		// Check if point has been already processed, if not call proximity recursively
+		if (std::find(processed_points.begin(), processed_points.end(), i) == processed_points.end()){
+			std::vector<int> clst; 
+			proximity(points[i], &clst, &processed_points, i, tree, distanceTol); 
+			clusters.push_back(clst); 
+		}
+	}
+	return clusters;
 }
+
 
 int main ()
 {
