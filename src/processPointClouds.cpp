@@ -19,22 +19,54 @@ void ProcessPointClouds<PointT>::numPoints(typename pcl::PointCloud<PointT>::Ptr
     std::cout << cloud->points.size() << std::endl;
 }
 
-
 template<typename PointT>
 typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(typename pcl::PointCloud<PointT>::Ptr cloud, float filterRes, Eigen::Vector4f minPoint, Eigen::Vector4f maxPoint)
 {
-
+    typename pcl::PointCloud<PointT>::Ptr cloud_filtered(new pcl::PointCloud<PointT>());
+    typename pcl::PointCloud<PointT>::Ptr processed_cloud(new pcl::PointCloud<PointT>());
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
 
     // TODO:: Fill in the function to do voxel grid point reduction and region based filtering
+    // Create the filtering object
+    pcl::VoxelGrid<PointT> sor;
+    sor.setInputCloud(cloud);
+    sor.setLeafSize(filterRes, filterRes, filterRes);
+    sor.filter(*cloud_filtered);
+
+    std::cout << "Length: " << cloud_filtered->points.size() << std::endl; 
+
+    // Create region of interest
+    pcl::CropBox<PointT> roi(true); 
+    roi.setMin(minPoint);
+    roi.setMax(maxPoint);
+    roi.setInputCloud(cloud_filtered);
+    roi.filter(*processed_cloud);
+
+    // Remove roof
+    std::vector<int> indices; 
+    pcl::CropBox<PointT> roof(true); 
+    roof.setMin(Eigen::Vector4f (-1.5, -1.7, -1, 1));
+    roof.setMax(Eigen::Vector4f (2.6, 1.7, -.4, 1));
+    roof.setInputCloud(processed_cloud);
+    roof.filter(indices); 
+
+    pcl::PointIndices::Ptr inliers {new pcl::PointIndices}; 
+    for (int point : indices){
+      inliers->indices.push_back(point); 
+    }
+    pcl::ExtractIndices<PointT> extract; 
+    extract.setInputCloud(processed_cloud);
+    extract.setIndices(inliers); 
+    extract.setNegative(true); 
+    extract.filter(*processed_cloud); 
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    std::cout << "filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
+    std::cout << "Filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
+    std::cout << "Final length: " << processed_cloud->points.size() << std::endl; 
 
-    return cloud;
-
+    return processed_cloud;
 }
 
 template<typename PointT>
