@@ -71,7 +71,7 @@ struct KdTree {
            node->point[2] <= (target[2] + distanceTol))) {
 
         // Calculate distance
-        float d = sqrt(pow((target[0] - node->point[0]), 2.0) + pow((target[1] - node->point[1]), 2.0) + pow((target[1] - node->point[1]), 2.0)); 
+        float d = sqrt(pow((target[0] - node->point[0]), 2.0) + pow((target[1] - node->point[1]), 2.0) + pow((target[2] - node->point[2]), 2.0)); 
 
         // std::cout << "Distance to point: " << std::to_string(d) << std::endl; 
         if (d <= distanceTol){
