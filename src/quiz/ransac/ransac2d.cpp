@@ -140,6 +140,56 @@ std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int ma
 	return inliersResult;
 }
 
+/** 
+ * \brief Ransac as per instructor's implementation
+ * \param[in] cloud a PCD
+ * \param[in] maxIterations max iterations before stopping
+ * \param[in] distanceTol tolerated distance between points
+ */
+std::unordered_set<int> Ransac2(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol) {
+  std::unordered_set<int> inlierResults;
+  srand(time(NULL));
+
+  while (maxIterations--) {
+    std::unordered_set<int> inliers;
+    while (inliers.size() < 2)
+      inliers.insert(rand() % (cloud->points.size()));
+
+    float x1, y1, x2, y2;
+
+    auto itr = inliers.begin();
+    x1 = cloud->points[*itr].x;
+    y2 = cloud->points[*itr].y;
+    itr++;
+    x2 = cloud->points[*itr].x;
+    y2 = cloud->points[*itr].y;
+
+    float a = (y1 - y2);
+    float b = (x2 - x1);
+    float c = (x1 * y2 - x2 * y1);
+
+    for (int index = 0; index < cloud->points.size(); index++) {
+      if (inliers.count(index) > 0)
+        continue;
+
+      pcl::PointXYZ point = cloud->points[index];
+      float x3 = point.x;
+      float y3 = point.y;
+
+      float d = fabs(a * x3 + b * y3 + c) / sqrt(a * a + b * b);
+
+      if (d <= distanceTol) {
+        inliers.insert(index);
+      }
+    }
+
+    if (inliers.size() > inlierResults.size()) {
+      inlierResults = inliers;
+    }
+  }
+  return inlierResults;
+}
+
 int main ()
 {
 
