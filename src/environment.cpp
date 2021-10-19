@@ -93,7 +93,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, float tol, int mi
 
     auto segmentCloud = pointProcessorI->SegmentPlane(filterCloud, 100, .2);
     renderPointCloud(viewer, segmentCloud.first, "obs", Color(1, 1, 1));
-    renderPointCloud(viewer, segmentCloud.second, "plane", Color(0,1,0));
+    // renderPointCloud(viewer, segmentCloud.second, "plane", Color(0,1,0));
     std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(0,0,1)};
     
     // auto cloudClusters = pointProcessorI->Clustering(segmentCloud.first, tol, min_points, max_points); 
@@ -109,6 +109,65 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, float tol, int mi
     }
 }
 
+/**
+ * \brief load, render and process pcd data
+ * \param [in] viewer a PCLVisualizer
+ * \param [in] pointProcessorI a ProcessPointCloud handler
+ * \param [in] inputCloud  pcd 
+ * \param [in] tol distance tolerance for clustering 
+ * \param [in] min_points min points in cluster
+ * \param [in] max_points min points in cluster
+ */
+void cityBlockLoop(pcl::visualization::PCLVisualizer::Ptr &viewer,
+                   ProcessPointClouds<pcl::PointXYZI> *pointProcessorI,
+                   const pcl::PointCloud<pcl::PointXYZI>::Ptr &inputCloud,
+                   float tol, int min_points, int max_points,
+                   float tol1, int min_p1, int max_p1) {
+
+  // Experiment with the ? values and find what works best
+  auto filterCloud = pointProcessorI->FilterCloud(inputCloud, .18, Eigen::Vector4f(-10, -5.5, -2, 1), Eigen::Vector4f(15, 6.5, 2, 1));
+
+  auto segmentCloud = pointProcessorI->SegmentPlane(filterCloud, 120, .15);
+  renderPointCloud(viewer, segmentCloud.first, "obs", Color(1, 1, 1));
+  renderPointCloud(viewer, segmentCloud.second, "plane", Color(0, 1, 0));
+  std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1)};
+
+  // auto cloudClusters = pointProcessorI->Clustering(segmentCloud.first, tol, min_points, max_points); 
+  // 2.2 60 400 - Best params for ownclustering method
+  // 2.27 30 2000
+  // float tol_1{0.45};
+  // int min_points_1{3};
+  // int max_points_1{1000}; ./environment .35 5 500 3 3 80
+  auto cloudClusters = pointProcessorI->OwnClustering(segmentCloud.first, tol, min_points, max_points);
+
+  // Get mean coordinate point of box and cluster these new points
+  auto clusters = pointProcessorI->ReCluster(cloudClusters); 
+  auto subClusters = pointProcessorI->OwnClustering(clusters, tol1, min_p1, max_p1);
+
+  std::vector<boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI>>> finalClusters; 
+
+  // From the box clustering, get back the original points from cloudClusters
+  for (auto cluster: subClusters) {
+    pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cluster(new pcl::PointCloud<pcl::PointXYZI>());
+    for (pcl::PointXYZI p : cluster->points){
+      for (auto point :cloudClusters[(int)p.intensity]->points){
+        temp_cluster->points.push_back(point);
+      }
+    }
+    // Put them into a pointxyzi vector
+    finalClusters.push_back(temp_cluster); 
+  }
+
+  // std::cout << "Final cluster count: " << finalClusters.size() << std::endl; 
+  int name_id = 0;
+  for (auto cluster : finalClusters) {
+    Box box = pointProcessorI->BoundingBox(cluster);
+    std::string name_cloud = std::to_string(name_id) + "_cluster";
+    renderBox(viewer, box, name_id);
+    name_id++;
+  }
+
+}
 
 //setAngle: SWITCH CAMERA ANGLE {XY, TopDown, Side, FPS}
 void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& viewer)
@@ -139,26 +198,50 @@ int main (int argc, char** argv)
     std::cout << "starting enviroment" << std::endl;
 
     // Arguments to test clustering
-    double tol;
-    int min_p, max_p;
+    double tol, tol1;
+    int min_p, max_p, min_p1, max_p1;
     if (argc == 1) {
-      tol = 0.65;
-      min_p = 6;
-      max_p = 30;
+      tol = 4.5;
+      min_p = 3;
+      max_p = 1000;
+      tol1 = 3.5;
+      min_p1 = 5;
+      max_p1 = 100;
     } else {
       tol = atof(argv[1]);
       min_p = atoi(argv[2]);
       max_p = atoi(argv[3]);
+      tol1 = atof(argv[4]);
+      min_p1 = atoi(argv[5]);
+      max_p1 = atoi(argv[6]);
     }
 
+    // 2.2 20 400
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
     // simpleHighway(viewer, tol, min_p, max_p);
-    cityBlock(viewer, tol, min_p, max_p); 
+    // cityBlock(viewer, tol, min_p, max_p); 
+
+    // Loop through pcd/data_1
+    ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
+    std::vector<boost::filesystem::path> stream = pointProcessorI->streamPcd("../src/sensors/data/pcd/data_1");
+    auto streamIterator = stream.begin();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloudI;
 
     while (!viewer->wasStopped ())
     {
+        // Clear viewer
+        viewer->removeAllPointClouds();
+        viewer->removeAllShapes();
+
+        // Load pcd and run obstacle detection process
+        inputCloudI = pointProcessorI->loadPcd((*streamIterator).string());
+        cityBlockLoop(viewer, pointProcessorI, inputCloudI, tol, min_p, max_p, tol1, min_p1, max_p1);
+
+        streamIterator++;
+        if(streamIterator == stream.end())
+            streamIterator = stream.begin();
         viewer->spinOnce ();
     } 
 }
