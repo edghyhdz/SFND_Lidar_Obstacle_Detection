@@ -34,7 +34,7 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     sor.setLeafSize(filterRes, filterRes, filterRes);
     sor.filter(*cloud_filtered);
 
-    std::cout << "Length: " << cloud_filtered->points.size() << std::endl; 
+    // std::cout << "Length: " << cloud_filtered->points.size() << std::endl; 
 
     // Create region of interest
     pcl::CropBox<PointT> roi(true); 
@@ -63,8 +63,8 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    std::cout << "Filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
-    std::cout << "Final length: " << processed_cloud->points.size() << std::endl; 
+    // std::cout << "Filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
+    // std::cout << "Final length: " << processed_cloud->points.size() << std::endl; 
 
     return processed_cloud;
 }
@@ -104,7 +104,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
   auto inliers = Ransac3D(cloud, maxIterations, distanceThreshold); 
   auto endTime = std::chrono::steady_clock::now();
   auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-  std::cout << "Ransac3D segmentation took " << elapsedTime.count() << " microseconds" << std::endl;
+  // std::cout << "Ransac3D segmentation took " << elapsedTime.count() << " microseconds" << std::endl;
 
   std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult = SeparateClouds(inliers, cloud);
   return segResult;
@@ -219,7 +219,7 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-    std::cout << "Clustering took " << elapsedTime.count() << " microseconds and found " << clusters.size() << " clusters" << std::endl;
+    // std::cout << "Clustering took " << elapsedTime.count() << " microseconds and found " << clusters.size() << " clusters" << std::endl;
 
     return clusters;
 }
@@ -249,30 +249,55 @@ template <typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Pr
 
   // TODO: Fill out this function to return list of indices for each cluster
   std::vector<std::vector<int>> clrs;
-  std::vector<int> processed_points;
+  std::vector<bool> processed(cloud->points.size(), false);
 
-  for (int i = 0; i < cloud->points.size() - 1; i++) {
+  int i = 0; 
+  while (i < cloud->points.size()) {
+    if (processed[i])
+    {
+      i++;
+      continue; 
+    }
     auto points = cloud->points[i];
     std::vector<float> temp{points.x, points.y, points.z};
-    if (std::find(processed_points.begin(), processed_points.end(), i) ==
-        processed_points.end()) {
-      std::vector<int> clst;
-      typename pcl::PointCloud<PointT>::Ptr temp_cluster(new pcl::PointCloud<PointT>());
-      euclideanHelper(temp, &clst, &processed_points, i, tree, clusterTolerance);
-      clrs.push_back(clst);
-
-      for (int _id : clst) {
-        auto temp = cloud->points[_id];
-        temp_cluster->points.push_back(temp);
-      }
-
-      if (temp_cluster->size() >= minSize && temp_cluster->size() <= maxSize)
-        clusters.push_back(temp_cluster);
+    std::vector<int> cluster;
+    euclideanHelper(temp, &cluster, &processed, i, tree, clusterTolerance);
+    typename pcl::PointCloud<PointT>::Ptr temp_cluster(new pcl::PointCloud<PointT>());
+    for (int _id : cluster) {
+      auto temp = cloud->points[_id];
+      temp_cluster->points.push_back(cloud->points[_id]);
     }
+    if (temp_cluster->size() >= minSize && temp_cluster->size() <= maxSize){
+      clusters.push_back(temp_cluster);
+    }
+    i++;
   }
+
+
+  // std::vector<int> processed_points;
+
+  // for (int i = 0; i < cloud->points.size() - 1; i++) {
+  //   auto points = cloud->points[i];
+  //   std::vector<float> temp{points.x, points.y, points.z};
+  //   if (std::find(processed_points.begin(), processed_points.end(), i) ==
+  //       processed_points.end()) {
+  //     std::vector<int> clst;
+  //     typename pcl::PointCloud<PointT>::Ptr temp_cluster(new pcl::PointCloud<PointT>());
+  //     euclideanHelper(temp, &clst, &processed_points, i, tree, clusterTolerance);
+  //     clrs.push_back(clst);
+
+  //     for (int _id : clst) {
+  //       auto temp = cloud->points[_id];
+  //       temp_cluster->points.push_back(temp);
+  //     }
+
+  //     if (temp_cluster->size() >= minSize && temp_cluster->size() <= maxSize)
+  //       clusters.push_back(temp_cluster);
+  //   }
+  // }
   auto endTime = std::chrono::steady_clock::now();
   auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-  std::cout << "Clustering took " << elapsedTime.count() << " miliseconds and found " << clusters.size() << " clusters" << std::endl;
+  // std::cout << "Clustering took " << elapsedTime.count() << " miliseconds and found " << clusters.size() << " clusters" << std::endl;
 
   return clusters;
 }
@@ -289,18 +314,53 @@ template <typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Pr
 template<typename PointT>
 void ProcessPointClouds<PointT>::euclideanHelper(std::vector<float> point,
                                             std::vector<int> *cluster,
-                                            std::vector<int> *p_points, int id,
+                                            std::vector<bool> *p_points, int id,
                                             KdTree *tree, float tol) {
-  (*p_points).push_back(id);
+  (*p_points)[id] = true;
   (*cluster).push_back(id);
+  
   auto search = tree->search(point, tol);
 
   for (auto p : search) {
-    if (std::find(p_points->begin(), p_points->end(), p) == p_points->end()) {
+    if (!(*p_points)[p]) {
       euclideanHelper(point, cluster, p_points, p, tree, tol);
     }
   }
 }
+
+template<typename PointT>
+typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::ReCluster(std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters) {
+
+  typename pcl::PointCloud<pcl::PointXYZI>::Ptr new_cluster(new pcl::PointCloud<pcl::PointXYZI>());
+
+  int name_id{0};
+  for (auto cluster : clusters) {
+    auto p = pcl::PointXYZI();
+    // Find bounding box for one of the clusters
+    float sum_x{0}, sum_y{0}, sum_z{0}; 
+    for (auto _p : cluster->points) {
+        sum_x += _p.x; 
+        sum_y += _p.y;
+        sum_z += _p.z; 
+    }
+    p.x = sum_x / cluster->points.size();
+    p.y = sum_y / cluster->points.size(); 
+    p.z = sum_z / cluster->points.size();
+    p.intensity = name_id;
+    new_cluster->points.push_back(p);
+    name_id++;
+  }
+  return new_cluster; 
+}
+
+// /**
+//  * \brief Cluster boxes
+//  */
+// template<typename PointT>
+// ProcessPointClouds<PointT>::ClusterBoxes(typename pcl::PointCloud<PointT>::Ptr cluster){
+
+// }
+
 
 template<typename PointT>
 Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Ptr cluster)
@@ -340,7 +400,7 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::loadPcd(std::s
     {
         PCL_ERROR ("Couldn't read file \n");
     }
-    std::cerr << "Loaded " << cloud->points.size () << " data points from "+file << std::endl;
+    // std::cerr << "Loaded " << cloud->points.size () << " data points from "+file << std::endl;
 
     return cloud;
 }
