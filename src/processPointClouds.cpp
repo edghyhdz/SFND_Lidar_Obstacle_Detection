@@ -249,6 +249,8 @@ template <typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Pr
 
   // TODO: Fill out this function to return list of indices for each cluster
   std::vector<std::vector<int>> clrs;
+
+  // Changed to how it was done on the lectures by the instructor
   std::vector<bool> processed(cloud->points.size(), false);
 
   int i = 0; 
@@ -273,7 +275,8 @@ template <typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Pr
     i++;
   }
 
-
+  // This was quite slow 
+  
   // std::vector<int> processed_points;
 
   // for (int i = 0; i < cloud->points.size() - 1; i++) {
