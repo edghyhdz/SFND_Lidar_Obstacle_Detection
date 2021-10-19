@@ -276,7 +276,7 @@ template <typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Pr
   }
 
   // This was quite slow 
-  
+
   // std::vector<int> processed_points;
 
   // for (int i = 0; i < cloud->points.size() - 1; i++) {
@@ -331,6 +331,11 @@ void ProcessPointClouds<PointT>::euclideanHelper(std::vector<float> point,
   }
 }
 
+/**
+ * \brief Get new coordinates for each cluster. Intensity here is being used as
+ * an id to get back the points from the original clusters
+ * \param[in] clusters a vector of pointCloud data
+ */
 template<typename PointT>
 typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::ReCluster(std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters) {
 

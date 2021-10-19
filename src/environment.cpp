@@ -147,6 +147,7 @@ void cityBlockLoop(pcl::visualization::PCLVisualizer::Ptr &viewer,
   std::vector<boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI>>> finalClusters; 
 
   // From the box clustering, get back the original points from cloudClusters
+  // Here intensity is used to get back the points from the original clusters
   for (auto cluster: subClusters) {
     pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cluster(new pcl::PointCloud<pcl::PointXYZI>());
     for (pcl::PointXYZI p : cluster->points){
