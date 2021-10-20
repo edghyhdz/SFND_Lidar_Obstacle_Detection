@@ -202,9 +202,9 @@ int main (int argc, char** argv)
     double tol, tol1;
     int min_p, max_p, min_p1, max_p1;
     if (argc == 1) {
-      tol = 4.5;
-      min_p = 3;
-      max_p = 1000;
+      tol = 0.35;
+      min_p = 5;
+      max_p = 500;
       tol1 = 3.5;
       min_p1 = 5;
       max_p1 = 100;
