@@ -157,7 +157,6 @@ pcl::PointIndices::Ptr ProcessPointClouds<PointT>::Ransac3D(typename pcl::PointC
       float y4 = point.y;
       float z4 = point.z;
 
-      i *(x4 - x1) + j *(y4 - y1) + k *(z4 - z1);
       float d = -(i * x1 + j * y1 + k * z1);
 
       float dist =
