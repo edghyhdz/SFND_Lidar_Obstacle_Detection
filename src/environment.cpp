@@ -125,9 +125,9 @@ void cityBlockLoop(pcl::visualization::PCLVisualizer::Ptr &viewer,
                    float tol1, int min_p1, int max_p1) {
 
   // Experiment with the ? values and find what works best
-  auto filterCloud = pointProcessorI->FilterCloud(inputCloud, .18, Eigen::Vector4f(-10, -5.5, -2, 1), Eigen::Vector4f(15, 6.5, 2, 1));
+  pcl::PointCloud<pcl::PointXYZI>::Ptr filterCloud = pointProcessorI->FilterCloud(inputCloud, .18, Eigen::Vector4f(-10, -5.5, -2, 1), Eigen::Vector4f(15, 6.5, 2, 1));
 
-  auto segmentCloud = pointProcessorI->SegmentPlane(filterCloud, 120, .15);
+  std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessorI->SegmentPlane(filterCloud, 120, .15);
   renderPointCloud(viewer, segmentCloud.first, "obs", Color(1, 1, 1));
   renderPointCloud(viewer, segmentCloud.second, "plane", Color(0, 1, 0));
   std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1)};
@@ -138,20 +138,20 @@ void cityBlockLoop(pcl::visualization::PCLVisualizer::Ptr &viewer,
   // float tol_1{0.45};
   // int min_points_1{3};
   // int max_points_1{1000}; ./environment .35 5 500 3 3 80
-  auto cloudClusters = pointProcessorI->OwnClustering(segmentCloud.first, tol, min_points, max_points);
+  std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = pointProcessorI->OwnClustering(segmentCloud.first, tol, min_points, max_points);
 
   // Get mean coordinate point of box and cluster these new points
-  auto clusters = pointProcessorI->ReCluster(cloudClusters); 
-  auto subClusters = pointProcessorI->OwnClustering(clusters, tol1, min_p1, max_p1);
+  pcl::PointCloud<pcl::PointXYZI>::Ptr clusters = pointProcessorI->ReCluster(cloudClusters); 
+  std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> subClusters = pointProcessorI->OwnClustering(clusters, tol1, min_p1, max_p1);
 
-  std::vector<boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI>>> finalClusters; 
+  std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> finalClusters; 
 
   // From the box clustering, get back the original points from cloudClusters
   // Here intensity is used to get back the points from the original clusters
-  for (auto cluster: subClusters) {
+  for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster: subClusters) {
     pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cluster(new pcl::PointCloud<pcl::PointXYZI>());
     for (pcl::PointXYZI p : cluster->points){
-      for (auto point :cloudClusters[(int)p.intensity]->points){
+      for (pcl::PointXYZI point :cloudClusters[(int)p.intensity]->points){
         temp_cluster->points.push_back(point);
       }
     }
@@ -161,7 +161,7 @@ void cityBlockLoop(pcl::visualization::PCLVisualizer::Ptr &viewer,
 
   // std::cout << "Final cluster count: " << finalClusters.size() << std::endl; 
   int name_id = 0;
-  for (auto cluster : finalClusters) {
+  for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : finalClusters) {
     Box box = pointProcessorI->BoundingBox(cluster);
     std::string name_cloud = std::to_string(name_id) + "_cluster";
     renderBox(viewer, box, name_id);
